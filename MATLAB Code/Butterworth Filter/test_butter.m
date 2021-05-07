@@ -29,19 +29,27 @@ title('Unfiltered Sleep EEG Signal')
 
 N = 1; % order = 2N;
 norm = 1/(Fs/2);
-[b,a] = butter(N, [1*norm 4*norm], 'bandpass');
+[b,a] = butter(N, [norm*1 norm*4], 'bandpass');
 delta = filter(b, a, y);
 
 subplot(312)
 plot(t, delta)
+ylim([min(delta), max(delta)]);
 xlabel('t (in sec)')
 ylabel('\muV')
 title('MATLAB Filter')
 
-test = my_butter(1,1,Fs,y);
+test = my_butter(1, 4, Fs/2,y);
 
 subplot(313)
 plot(t, test)
+ylim([min(test), max(test)]);
 xlabel('t (in sec)')
 ylabel('\muV')
 title('My Filter')
+
+%figure(2);
+%plot(t,y);
+%hold on;
+%plot(t, delta - test);
+%hold off;
