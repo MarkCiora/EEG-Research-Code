@@ -1,16 +1,42 @@
+%% Ideal lowpass
 clear;
 clc;
 
-x = -20000:20000;
-y = 4*(x/10000).^2 - (x/10000).^4;% just some funky looking graph
+s = 0:0.0001:2;
+H = s;
+for i = 1:20001
+   if H(i) > 1
+       H(i) = 0;
+   else
+       H(i) = 1;
+   end
+end
+plot(s,H);
+ylim([-0.1 1.2]);
 
+%% different order butterworths on same plot
+clear;
+clc;
 
-subplot(311)
-plot(x,y);
-subplot(312)
+s = 0:0.001:2;
 
-subplot(313)
+H_1 = 1 ./ sqrt(1 + s.^2);
+H_2 = 1 ./ sqrt(1 + s.^4);
+H_3 = 1 ./ sqrt(1 + s.^6);
+H_4 = 1 ./ sqrt(1 + s.^8);
+H_5 = 1 ./ sqrt(1 + s.^10);
+H_100 = 1 ./ sqrt(1 + s.^200);
 
+figure(1);
+title('Butterworth Orders 1,2,3,4,5,100');
+hold on;
+plot(s,H_1);
+plot(s,H_2);
+plot(s,H_3);
+plot(s,H_4);
+plot(s,H_5);
+plot(s,H_100);
+hold off;
 
 %% fifth order
 x=0:0.001:2
@@ -221,8 +247,8 @@ j = sqrt(-1);
 % w_t is the target frequency
 % w_t +- w_w is the pass band
 % T is the sampling period
-wL = 35*pi/100;
-wH = 12*pi/100;
+wL = 50*pi/100;
+wH = 20*pi/100;
 T = 1;
 
 %frequency values for plotting. 1e-6 to avoid pole-zero cancellations
@@ -240,7 +266,14 @@ A = wL*wH;
 %Transfer function
 H_num = (-x/wH) + (z.^2)*(x/wH);
 H_den = (1 - 2*x*w0/A + x*x/A) + (z)*(2-2*x*x/A) + (z.^2)*(1 + 2*x*w0/A + x*x/A);
-H = H_num ./ H_den;
+H1 = H_num ./ H_den;
+
+%without prewarping
+x=2/T;
+
+H_num = (-x/wH) + (z.^2)*(x/wH);
+H_den = (1 - 2*x*w0/A + x*x/A) + (z)*(2-2*x*x/A) + (z.^2)*(1 + 2*x*w0/A + x*x/A);
+H2 = H_num ./ H_den;
 
 y=zeros(1,2001);
 y(1000 + round(wH*2000/2/pi)) = 1;
@@ -248,9 +281,28 @@ y(1000 + round(wL*2000/2/pi)) = 1;
 y(1000 - round(wH*2000/2/pi)) = 1;
 y(1000 - round(wL*2000/2/pi)) = 1;
 
-plot(w,abs(H));
+w = T*(1e-6:pi/1000:pi+1e-6);
+H1_ = w;
+H2_ = w;
+y_ = w;
+for i = 1001:2001
+   H1_(i-1000) = H1(i);
+   H2_(i-1000) = H2(i);
+   y_(i-1000) = y(i);
+end
+
+plot(w,abs(H1_));
 hold on;
-plot(w,y);
+plot(w,y_);
+hold off;
+title('With Prewarping');
+
+figure(2);
+plot(w,abs(H2_));
+hold on;
+plot(w,y_);
+hold off;
+title('Without Prewarping');
 
 %Reminder:
 %wL is the cutoff for the lowpass filter, or the higher cutoff of the band
@@ -263,7 +315,7 @@ plot(w,y);
 % y[n]*b(1) = x[n]*a(1) + x[n-1]*a(2) + x[n-2]*a(3) - y[n-1]*b(2) - y[n-2]*b(3)
 % a(1) = x/wH
 % a(2) = 0
-% a(3) = x/wH
+% a(3) = -x/wH
 % b(1) = 1 + 2*x*w0/A + x*x/A
 % b(2) = 2 - 2*x*x/A
 % b(3) = 1 - 2*x*w0/A + x*x/A
