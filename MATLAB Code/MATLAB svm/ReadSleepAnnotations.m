@@ -2,4 +2,4 @@
 h = edfinfo('SC4021EH-Hypnogram.edf');
 
 %get annotations in command window
-m = h.Annotations;
+m = h.Annotations
