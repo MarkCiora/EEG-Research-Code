@@ -54,21 +54,3 @@ function y = my_butter(low, high, fs, x)
             y(k) = (a(1)*x(k) + a(3)*x(k-2) - b(2)*y(k-1) - b(3)*y(k-2))/b(1);
     end
 end
-
-
-
-%% Eileen <3
-%     % prewarping the cutoff frequencies
-%     T = 1/fs;
-%     wp1 = (2/T)*tan(wp1*T/2);
-%     wp2 = (2/T)*tan(wp2*T/2);
-%     
-%     n = 2; % second order
-%     A = 10*sqrt(10); % minimum attenuation of 30dB
-%     
-%     % finding outer cutoff freqencies
-%     ws2 = wp2*10^(log(A)/n); % rearrange order equation
-%     ws1 = wp1*wp2/ws2; % to make it symmetrical in log domain
-%     
-%     % bandwidth variable
-%     BW = wp2-wp1;
