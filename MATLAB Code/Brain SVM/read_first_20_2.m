@@ -1,6 +1,4 @@
-% This file must be run first to interpret the data from file
-% After this use "feature_extraction.m"
-
+%This file must be run first to interpret the data
 
 %% Clear
 clc
@@ -67,7 +65,6 @@ Data(20).info = edfinfo('SC4092E0-PSG.edf');
 
 for j = 1:20
     Data(j).Fs = Data(j).info.NumSamples(2)/seconds(Data(j).info.DataRecordDuration);
-    Data(j).reduced_bool = 0;
 end
 
 
@@ -98,41 +95,34 @@ Data(20).hyp = edfinfo('SC4092EC-Hypnogram.edf').Annotations;
 
 
 
+
 %% Shorter sample duration, more power data
-% reduces data to 3 second samples of 300 data points
-if Data(1).reduced_bool == 0
-    for j = 1:20
-        Data(j).samples = Data(j).samples*10;
-        new_sig = zeros(300,Data(j).samples);
-        for i = 1:Data(j).samples/10
-            for k = 1:10
-                new_sig(:,k + (i-1)*10) = Data(j).signal(1 + (k-1)*300:k*300, i);
-            end
-        end
-        Data(j).signal = new_sig;
-    end
-    clear new_sig
-
-    % mean centered samples and mean
-    for j = 1:20
-        Data(j).mean = zeros(Data(j).samples, 1);
-        for i = 1:Data(j).samples
-            Data(j).mean(i) = sum(Data(j).signal(:,i)) / 300;
-            Data(j).signal(:,i) = Data(j).signal(:,i) - Data(j).mean(i);
+for j = 1:20
+    Data(j).samples = Data(j).samples*10;
+    new_sig = zeros(300,Data(j).samples);
+    for i = 1:Data(j).samples/10
+        for k = 1:10
+            new_sig(:,k + (i-1)*10) = Data(j).signal(1 + (k-1)*300:k*300, i);
         end
     end
+    Data(j).signal = new_sig;
+end
 
-    % z-standard and variance
-    for j = 1:20
-        Data(j).var = zeros(Data(j).samples, 1);
-        for i = 1:Data(j).samples
-            Data(j).var(i) = sum(Data(j).signal(:,i).^2) / 300;
-            Data(j).signal(:,i) = Data(j).signal(:,i) / sqrt(Data(j).var(i));
-        end
-
-        Data(j).reduced_bool = 1;
+%% mean centered samples
+for j = 1:20
+    for i = 1:Data(j).samples
+        Data(j).signal(:,i) = Data(j).signal(:,i) - sum(Data(j).signal(:,i)) / 300;
     end
 end
+
+%% z-standard
+for j = 1:20
+    for i = 1:Data(j).samples
+        Data(j).signal(:,i) = Data(j).signal(:,i) * sqrt(300) / sqrt(sum(Data(j).signal(:,i).^2));
+    end
+end
+
+
 
 %% States
 for j = 1:20
@@ -183,15 +173,13 @@ for j = 1:20
     Data(j).state = sleep_state(1:sum(Data(j).num));
     Data(j).signal = Data(j).signal(:,1:sum(Data(j).num));
     Data(j).samples = sum(Data(j).num);
-    Data(j).mean = Data(j).mean(1:Data(j).samples);
-    Data(j).var = Data(j).var(1:Data(j).samples);
 end
 
-%% clear up some memory
+%%
 
 Data = rmfield(Data, 'hyp');
 
-%% clear up some memory
+%%
 clear char_
 clear asdf
 clear i

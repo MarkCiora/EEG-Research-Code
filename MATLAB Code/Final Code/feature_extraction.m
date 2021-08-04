@@ -1,10 +1,8 @@
 %% After running "read_first_20_2.m" choose features from here
-% If you want to use all the features, run the whole script
-% It might take a while
 % At the end all the features are combined into one set of feature vectors
 % A moving average of this result is also created
 
-%% Filter and extract power
+%% Filter and extract power -- 2nd order Butter approx
 % Filter ranges:
 filt = [1   4;...
         4   8;...
@@ -62,6 +60,42 @@ clear ratio_o2
 clear F_s
 clear filt
 
+%% Filter and exact power with ideal filtering
+filt = [1   4;...
+        4   8;...
+        8   12;...
+        12  35];
+
+F_s = 100;
+filt = round(filt*300/F_s);
+for j = 1:20
+    power_o2 = zeros(5,Data(j).samples);
+    for i = 1:Data(j).samples
+        temp = fft(Data(j).signal(:,i));
+        power_o2(1,i) = sum(abs(temp(filt(1,1):filt(1,2))).^2)/150;
+        power_o2(2,i) = sum(abs(temp(filt(2,1):filt(2,2))).^2)/150;
+        power_o2(3,i) = sum(abs(temp(filt(3,1):filt(3,2))).^2)/150;
+        power_o2(4,i) = sum(abs(temp(filt(4,1):filt(4,2))).^2)/150;
+    end
+    power_o2(5,:) = power_o2(1,:) + power_o2(2,:) + power_o2(3,:) + power_o2(4,:);
+    
+    % Extract ratios of power from each frequency range
+    ratio_o2 = zeros(4,Data(j).samples);
+    ratio_o2(1,:) = power_o2(1,:)./power_o2(5,:);
+    ratio_o2(2,:) = power_o2(2,:)./power_o2(5,:);
+    ratio_o2(3,:) = power_o2(3,:)./power_o2(5,:);
+    ratio_o2(4,:) = power_o2(4,:)./power_o2(5,:);
+    
+    % Power ratios projected onto a 3d hyperplane
+    % No information is lost here
+    % proj_mat defines a hyperplane orthogonal to the ones vector
+    proj_mat = [-1  1 -1;...
+                -1 -1  1;...
+                 1 -1 -1;...
+                 1  1  1];
+    Data(j).p_ratio = transpose(proj_mat) * ratio_o2;
+end
+
 %% Hjorth features
 % Activity = Variance(x[n])
 %
@@ -77,7 +111,6 @@ for j = 1:20
     derivative = zeros(299,Data(j).samples);
     derivative2 = zeros(298,Data(j).samples);
     
-    var = Data(j).var;
     var_d = zeros(Data(j).samples,1);
     var_d2 = zeros(Data(j).samples,1);
     
@@ -100,9 +133,9 @@ for j = 1:20
         
     end
     
-    activity = var;
-    mobility = sqrt(var_d ./ var);
-    complexity = sqrt(var_d2 .* var) ./ var_d;
+    activity = Data(j).var;
+    mobility = sqrt(var_d ./ Data(j).var);
+    complexity = sqrt(var_d2 .* Data(j).var) ./ var_d;
     
     Data(j).Hjorth = [transpose(activity); transpose(mobility); transpose(complexity)];
 end
@@ -118,14 +151,41 @@ clear var_d
 clear var_d2
 
 %% Feature vector
-% If nothing has changed, features should be a list of 6 dimensional
-% vectors
+% If nothing has changed, features should be a list of 6 dimensional vectors
+% By default, Hjorth features and the order 2 filtered power is used
 for j = 1:20
     Data(j).features = [Data(j).Hjorth; Data(j).p_ratio_o2];
 end
 
+%% Normalize all features (OPTIONAL)
+total = 0;
+for j = 1:20
+    total = total + Data(j).samples;
+end
+
+mean = [0;0;0;0;0;0];
+for j = 1:20
+    for i = 1:height(Data(j).features)
+        mean(i) = mean(i) + sum(Data(j).features(i,:));
+    end
+end
+mean = mean/total;
+
+var = [0;0;0;0;0;0];
+for j = 1:20
+    for i = 1:height(Data(j).features)
+        var(i) = var(i) + sum((Data(j).features(i,:)-mean(i)).^2);
+    end
+end
+var = var/total;
+
+for j = 1:20
+    Data(j).features = (Data(j).features() - mean) ./ sqrt(var);
+end
+
+
 %% Moving Average
-ma_val = 5;
+ma_val = 8;
 for j = 1:20
     Data(j).features_ma = zeros(height(Data(j).features),Data(j).samples);
     
@@ -137,10 +197,47 @@ for j = 1:20
 end
 clear ma_val
 
+%% Fake moving average, not sure what to call it
+% some recursive thing
+%.8 seems good
+factor = .8; % MUST BE LESS THAN 1
+for j = 1:20
+    Data(j).features_ma = zeros(height(Data(j).features),Data(j).samples);
+    Data(j).features_ma(:,1) = Data(j).features(:,1) ./ (1 - factor);
+    
+    for i = 2:Data(j).samples
+        Data(j).features_ma(:,i) = Data(j).features(:,i) + ...
+                                   factor * Data(j).features_ma(:,i-1);
+    end
+end
+clear factor
+
+
 %% Separate data into shallow and deep sleep feature sets
 for j = 1:20
     Data(j).shallow = zeros(height(Data(j).features), sum(Data(j).num(1:2)));
     Data(j).deep = zeros(height(Data(j).features), sum(Data(j).num(3:4)));
+    Data(j).other = zeros(height(Data(j).features), sum(Data(j).num(5:6)));
+    Data(j).shallow_ma = zeros(height(Data(j).features), sum(Data(j).num(1:2)));
+    Data(j).deep_ma = zeros(height(Data(j).features), sum(Data(j).num(3:4)));
+    Data(j).other_ma = zeros(height(Data(j).features), sum(Data(j).num(5:6)));
     
+    count = [0 0 0];
+    for i = 1:Data(j).samples
+        if Data(j).state(i) == '1' || Data(j).state(i) == '2'
+            count(1) = count(1) + 1;
+            Data(j).shallow(:,count(1)) = Data(j).features(:,i);
+            Data(j).shallow_ma(:,count(1)) = Data(j).features_ma(:,i);
+        elseif Data(j).state(i) == '3' || Data(j).state(i) == '4'
+            count(2) = count(2) + 1;
+            Data(j).deep(:,count(2)) = Data(j).features(:,i);
+            Data(j).deep_ma(:,count(2)) = Data(j).features_ma(:,i);
+        else
+            count(3) = count(3) + 1;
+            Data(j).other(:,count(3)) = Data(j).features(:,i);
+            Data(j).other_ma(:,count(3)) = Data(j).features_ma(:,i);
+        end
+    end
     
 end
+
