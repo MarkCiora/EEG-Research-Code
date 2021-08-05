@@ -53,12 +53,10 @@ end
 %% Train and test on one person
 % note that the moving average training set is used here
 
-kern_type = 'linear';
+kern_type = 'polynomial';
 kern_type2 = 'KernelScale';
-gamma = .1;
-kern_val = 1/sqrt(2*gamma);
+kern_val = 2;
 
-kern_val = 'auto';
 
 for j = 1:10
     clear out

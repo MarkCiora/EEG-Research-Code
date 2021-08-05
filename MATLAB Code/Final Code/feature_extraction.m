@@ -5,9 +5,9 @@
 %% Filter and extract power -- 2nd order Butter approx
 % Filter ranges:
 filt = [1   4;...
-        4   8;...
-        8   12;...
-        12  35];
+        5   8;...
+        9   12;...
+        13  35];
 
 F_s = 100;
 
@@ -150,12 +150,25 @@ clear var
 clear var_d
 clear var_d2
 
+%% Approximate Entropy
+m = 3;
+r = 0.12;
+splits = 5;
+for j = 1:20
+    Data(j).ApproxEnt = zeros(1,Data(j).samples);
+    for i = 1:Data(j).samples
+        Data(j).ApproxEnt(1,i) = sum(ApEn(Data(j).signal(:,i),m,r,splits));
+    end
+end
+
 %% Feature vector
 % If nothing has changed, features should be a list of 6 dimensional vectors
 % By default, Hjorth features and the order 2 filtered power is used
 % Also extracts overall feature variance and mean
 for j = 1:20
-    Data(j).features = [Data(j).Hjorth; Data(j).p_ratio];
+    Data(j).features = [Data(j).Hjorth;...
+                        Data(j).p_ratio_o2;...
+                        Data(j).ApproxEnt];
     for i = 1:height(Data(j).features)
         Data(j).features_mean(i) = ...
             sum(Data(j).features(i,:)) / Data(j).samples;
@@ -171,7 +184,7 @@ for j = 1:20
     total = total + Data(j).samples;
 end
 
-mean = [0;0;0;0;0;0];
+mean = zeros(height(Data(j).features),1);
 for j = 1:20
     for i = 1:height(Data(j).features)
         mean(i) = mean(i) + sum(Data(j).features(i,:));
@@ -179,7 +192,7 @@ for j = 1:20
 end
 mean = mean/total;
 
-var = [0;0;0;0;0;0];
+var = zeros(height(Data(j).features),1);
 for j = 1:20
     for i = 1:height(Data(j).features)
         var(i) = var(i) + sum((Data(j).features(i,:)-mean(i)).^2);
