@@ -27,7 +27,7 @@ for j = 1:20
     clear train_y
     
     svm = fitcsvm(transpose(train_set_condensed), transpose(train_y_condensed),...
-                'KernelFunction', 'rbf',...
+                'KernelFunction', 'linear',...
                 'ClassNames', [-1,1]);
     
     [label, score] = predict(svm, transpose(test_set));
@@ -53,9 +53,17 @@ end
 %% Train and test on one person
 % note that the moving average training set is used here
 
+kern_type = 'linear';
+kern_type2 = 'KernelScale';
+gamma = .1;
+kern_val = 1/sqrt(2*gamma);
+
+kern_val = 'auto';
+
 for j = 1:10
+    clear out
     a = 2*j-1;
-    b = j + 1;
+    b = 2*j;
     train_set = [Data(a).shallow_ma Data(a).deep_ma];
     train_y = [ (-1)*ones(1,width(Data(a).shallow_ma))...
                 ones(1,width(Data(a).deep_ma))];
@@ -63,9 +71,53 @@ for j = 1:10
     test_y = [  (-1)*ones(1,width(Data(b).shallow_ma))...
                 ones(1,width(Data(b).deep_ma))];
     
-    svm = fitcsvm(transpose(train_set), transpose(train_y),...
-                'KernelFunction', 'rbf',...
+            
+    %permutate
+    [train_set, train_y] = my_rand_perm(train_set, train_y);
+
+    %split
+    split = split_80_20_SVM(train_set, train_y, width(train_y));
+    
+    test_acc = [];
+    for i = 1:5
+        x = [];
+        y = [];
+        for k = 1:5
+            if k == i
+                continue
+            end
+            x = [x split(k).x];
+            y = [y split(k).y];
+        end
+        out(i).svm = fitcsvm(transpose(x), transpose(y),...
+                'KernelFunction', kern_type,...
+                kern_type2, kern_val,...
                 'ClassNames', [-1,1]);
+        
+        [label, score] = predict(out(i).svm, transpose(split(i).x));
+        adder = 0;
+        for k = 1:width(split(i).y)
+            if label(k) == split(i).y(k)
+                adder = adder + 1;
+            end
+        end
+        test_acc(i) = adder/width(split(i).y);
+        
+    end
+
+    %select the best one
+    max = 0;
+    target = 1;
+    for i = 1:5
+        if max < test_acc(i)
+            target = i;
+            max = test_acc(i);
+        end
+    end
+    svm = out(target).svm;
+            
+            
+    
     
     [label, score] = predict(svm, transpose(test_set));
     
@@ -80,7 +132,7 @@ for j = 1:10
 end
 for j = 1:10
     b = 2*j-1;
-    a = j + 1;
+    a = 2*j;
     train_set = [Data(a).shallow_ma Data(a).deep_ma];
     train_y = [ (-1)*ones(1,width(Data(a).shallow_ma))...
                 ones(1,width(Data(a).deep_ma))];
@@ -88,9 +140,53 @@ for j = 1:10
     test_y = [  (-1)*ones(1,width(Data(b).shallow_ma))...
                 ones(1,width(Data(b).deep_ma))];
     
-    svm = fitcsvm(transpose(train_set), transpose(train_y),...
-                'KernelFunction', 'rbf',...
+            
+    %permutate
+    [train_set, train_y] = my_rand_perm(train_set, train_y);
+
+    %split
+    split = split_80_20_SVM(train_set, train_y, width(train_y));
+    
+    test_acc = [];
+    for i = 1:5
+        x = [];
+        y = [];
+        for k = 1:5
+            if k == i
+                continue
+            end
+            x = [x split(k).x];
+            y = [y split(k).y];
+        end
+        out(i).svm = fitcsvm(transpose(x), transpose(y),...
+                'KernelFunction', kern_type,...
+                kern_type2, kern_val,...
                 'ClassNames', [-1,1]);
+        
+        [label, score] = predict(out(i).svm, transpose(split(i).x));
+        adder = 0;
+        for k = 1:width(split(i).y)
+            if label(k) == split(i).y(k)
+                adder = adder + 1;
+            end
+        end
+        test_acc(i) = adder/width(split(i).y);
+        
+    end
+
+    %select the best one
+    max = 0;
+    target = 1;
+    for i = 1:5
+        if max < test_acc(i)
+            target = i;
+            max = test_acc(i);
+        end
+    end
+    svm = out(target).svm;
+            
+            
+    
     
     [label, score] = predict(svm, transpose(test_set));
     

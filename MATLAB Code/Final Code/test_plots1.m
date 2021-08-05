@@ -1,6 +1,6 @@
 %% scatter person features vs features_ma
 
-person = 5;
+person = 13;
 figure(1)
 a = Data(person).shallow_ma;
 scatter3(a(1,:), a(2,:),a(3,:))

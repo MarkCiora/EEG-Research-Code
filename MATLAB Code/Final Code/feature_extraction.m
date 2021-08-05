@@ -153,8 +153,16 @@ clear var_d2
 %% Feature vector
 % If nothing has changed, features should be a list of 6 dimensional vectors
 % By default, Hjorth features and the order 2 filtered power is used
+% Also extracts overall feature variance and mean
 for j = 1:20
-    Data(j).features = [Data(j).Hjorth; Data(j).p_ratio_o2];
+    Data(j).features = [Data(j).Hjorth; Data(j).p_ratio];
+    for i = 1:height(Data(j).features)
+        Data(j).features_mean(i) = ...
+            sum(Data(j).features(i,:)) / Data(j).samples;
+        Data(j).features_var(i) = ...
+            sum((Data(j).features(i,:) - Data(j).features_mean(i)).^2)...
+            / Data(j).samples;
+    end
 end
 
 %% Normalize all features (OPTIONAL)
@@ -183,6 +191,10 @@ for j = 1:20
     Data(j).features = (Data(j).features() - mean) ./ sqrt(var);
 end
 
+clear mean
+clear var
+clear total
+
 
 %% Moving Average
 ma_val = 8;
@@ -200,7 +212,7 @@ clear ma_val
 %% Fake moving average, not sure what to call it
 % some recursive thing
 %.8 seems good
-factor = .8; % MUST BE LESS THAN 1
+factor = .82; % MUST BE LESS THAN 1
 for j = 1:20
     Data(j).features_ma = zeros(height(Data(j).features),Data(j).samples);
     Data(j).features_ma(:,1) = Data(j).features(:,1) ./ (1 - factor);
