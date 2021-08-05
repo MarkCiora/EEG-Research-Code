@@ -23,7 +23,6 @@ end
 average_qda = sum(accuracy_qda)/20
 
 %% Train classifier on one, test against 19 WITH CROSS-VALIDATION
-% note that the moving average training set is used here
 
 for j = 1:20
     train_set = [];

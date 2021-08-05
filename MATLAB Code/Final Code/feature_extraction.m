@@ -1,6 +1,7 @@
 %% After running "read_first_20_2.m" choose features from here
 % At the end all the features are combined into one set of feature vectors
 % A moving average of this result is also created
+% Once features have been selected, classify them in another file
 
 %% Filter and extract power -- 2nd order Butter approx
 % Filter ranges:

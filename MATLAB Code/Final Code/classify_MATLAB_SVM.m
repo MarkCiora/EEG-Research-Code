@@ -1,5 +1,8 @@
+% Output will be in average and accuracy variables
+
+
 %% Train classifier on one, test against 19
-% note that the moving average training set is used here
+% This might take a very long time
 
 for j = 1:20
     train_set = [];
@@ -27,7 +30,8 @@ for j = 1:20
     clear train_y
     
     svm = fitcsvm(transpose(train_set_condensed), transpose(train_y_condensed),...
-                'KernelFunction', 'linear',...
+                'KernelFunction', 'rbf',...
+                'KernelScale', 'auto',...
                 'ClassNames', [-1,1]);
     
     [label, score] = predict(svm, transpose(test_set));
@@ -41,21 +45,17 @@ for j = 1:20
     accuracy(j) = adder/width(test_y)
     
 end
-%clear train_set
-%clear train_y
-%clear test_set
-%clear test_y
-%average = sum(accuracy)/20
+average = sum(accuracy)/20
 
 
 
 
 %% Train and test on one person
-% note that the moving average training set is used here
+% 5 fold cross-validation within data set
 
-kern_type = 'polynomial';
+kern_type = 'rbf';
 kern_type2 = 'KernelScale';
-kern_val = 2;
+kern_val = 'auto';
 
 
 for j = 1:10
